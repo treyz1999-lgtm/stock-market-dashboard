@@ -1,73 +1,128 @@
 # Stock Market Dashboard
 
-A production-oriented stock market dashboard project.
+A production-style full-stack stock market dashboard built with **FastAPI**, **React**, and the **Twelve Data API**.
 
-## Project structure
+Users can search for publicly traded companies, retrieve current market data, and visualize historical stock performance through a responsive web interface.
 
-- `backend/` — backend application and tests
-- `frontend/` — frontend application workspace
-- `docs/` — project documentation and roadmap
+---
 
-This repository currently contains only the initial project structure.
+## Features
 
-## Backend development
+- Stock search with autocomplete
+- Current market quotes
+- Historical price charts
+- Responsive React dashboard
+- FastAPI REST API
+- Environment-based configuration
+- Error handling for invalid symbols, rate limits, and provider failures
+- Automated backend testing
 
-From the repository root on Windows:
+---
 
-```powershell
+## Tech Stack
+
+### Frontend
+
+- React
+- JavaScript
+- Axios
+- Recharts
+
+### Backend
+
+- FastAPI
+- Python
+- httpx
+- Pydantic
+- Uvicorn
+
+### External Services
+
+- Twelve Data API
+
+---
+
+## Project Structure
+
+```
+backend/
+frontend/
+docs/
+```
+
+---
+
+## Local Development
+
+### Backend
+
+```bash
 python -m venv backend/.venv
-backend/.venv/Scripts/python.exe -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt
-backend/.venv/Scripts/python.exe -m pytest backend/tests
-backend/.venv/Scripts/ruff.exe check backend
-```
 
-## Frontend development
+backend/.venv/Scripts/python.exe -m pip install \
+-r backend/requirements.txt \
+-r backend/requirements-dev.txt
 
-From the `frontend/` directory:
-
-```powershell
-npm install
-npm run dev
-```
-
-Create a production build with:
-
-```powershell
-npm run build
-```
-
-## Stock API examples
-
-Copy `backend/.env.example` to `backend/.env` and set a Twelve Data API key:
-
-```env
-TWELVE_DATA_API_KEY=your_api_key_here
-TWELVE_DATA_BASE_URL=https://api.twelvedata.com
-```
-
-Run the backend development server from the repository root:
-
-```powershell
 backend/.venv/Scripts/python.exe -m uvicorn backend.app.main:app --reload
 ```
 
-Search for US-listed symbols by company name or ticker:
+### Frontend
 
-```text
-GET http://127.0.0.1:8000/api/stocks/search?q=Apple
+```bash
+cd frontend
+
+npm install
+
+npm run dev
 ```
 
-Retrieve a current normalized quote:
+---
 
-```text
-GET http://127.0.0.1:8000/api/stocks/AAPL/quote
+## Environment Variables
+
+Create:
+
+```
+backend/.env
 ```
 
-Retrieve normalized daily price history:
+Example:
 
-```text
-GET http://127.0.0.1:8000/api/stocks/AAPL/history?range=1Y
+```env
+TWELVE_DATA_API_KEY=YOUR_API_KEY
+TWELVE_DATA_BASE_URL=https://api.twelvedata.com
 ```
 
-Twelve Data credentials are loaded server-side from `backend/.env` and must not be
-included in browser requests.
+Do **not** commit your API key.
+
+---
+
+## Example API Endpoints
+
+Search
+
+```
+GET /api/stocks/search?q=Apple
+```
+
+Current Quote
+
+```
+GET /api/stocks/AAPL/quote
+```
+
+Historical Prices
+
+```
+GET /api/stocks/AAPL/history?range=1Y
+```
+
+---
+
+## Why This Project?
+
+This project was built to gain experience developing a modern production-style web application while exploring AI-assisted software development.
+
+OpenAI Codex was used throughout the project as a collaborative coding assistant. The development process emphasized system design, backend architecture, API integration, frontend composition, testing, and iterative refinement rather than simply generating code.
+
+The objective was to understand how AI coding agents can accelerate software development while maintaining good engineering practices and code quality.
