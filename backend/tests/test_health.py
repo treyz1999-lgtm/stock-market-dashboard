@@ -28,12 +28,30 @@ def test_local_react_origin_is_allowed() -> None:
     )
 
 
-def test_unconfigured_origin_is_not_allowed() -> None:
+def test_deployed_vercel_origin_is_allowed() -> None:
+    origin = 'https://stock-market-dashboard-self.vercel.app'
+
     with _client() as client:
         response = client.options(
             '/api/health',
             headers={
-                'Origin': 'http://localhost:3000',
+                'Origin': origin,
+                'Access-Control-Request-Method': 'GET',
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers['access-control-allow-origin'] == origin
+
+
+def test_unconfigured_origin_is_not_allowed() -> None:
+    origin = 'http://localhost:3000'
+
+    with _client() as client:
+        response = client.options(
+            '/api/health',
+            headers={
+                'Origin': origin,
                 'Access-Control-Request-Method': 'GET',
             },
         )
