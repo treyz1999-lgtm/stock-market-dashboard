@@ -18,6 +18,7 @@ coverage/
 .env
 .env.*
 !.env.example
+/backend/.env
 
 # Local databases
 *.db

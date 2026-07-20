@@ -35,3 +35,26 @@ Create a production build with:
 ```powershell
 npm run build
 ```
+
+## Stock API examples
+
+Run the backend development server from the repository root:
+
+```powershell
+backend/.venv/Scripts/python.exe -m uvicorn backend.app.main:app --reload
+```
+
+Search for US-listed symbols by company name or ticker:
+
+```text
+GET http://127.0.0.1:8000/api/stocks/search?q=Apple
+```
+
+Retrieve a current normalized quote:
+
+```text
+GET http://127.0.0.1:8000/api/stocks/AAPL/quote
+```
+
+Finnhub credentials are loaded server-side from `backend/.env` and must not be
+included in browser requests.
