@@ -1,12 +1,8 @@
 import './App.css'
+import Dashboard from './pages/Dashboard.jsx'
 
 function App() {
-  return (
-    <main>
-      <h1>Stock Market Dashboard</h1>
-      <p>The Vite React development environment is ready.</p>
-    </main>
-  )
+  return <Dashboard />
 }
 
 export default App

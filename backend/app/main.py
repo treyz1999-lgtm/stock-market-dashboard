@@ -5,9 +5,9 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.api.health import router as health_router
-from backend.app.api.stocks import router as stocks_router
 from backend.app.core.config import settings
+from backend.app.routes.health_router import router as health_router
+from backend.app.routes.stocks_router import router as stocks_router
 from backend.app.services.finnhub import FinnhubProvider
 
 

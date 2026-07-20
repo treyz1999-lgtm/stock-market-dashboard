@@ -4,7 +4,8 @@ These instructions apply throughout the repository.
 
 ## Architecture
 
-- Keep backend HTTP interfaces in `backend/app/api/`.
+- Keep backend HTTP interfaces in `backend/app/routes/` and name router modules
+  with a `_router.py` suffix.
 - Keep configuration and shared infrastructure in `backend/app/core/`.
 - Keep persistence models in `backend/app/models/`.
 - Keep validation and transport schemas in `backend/app/schemas/`.
