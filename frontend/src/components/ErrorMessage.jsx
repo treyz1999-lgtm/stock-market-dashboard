@@ -1,3 +1,4 @@
+/** Render a user-facing request error without exposing provider details. */
 function ErrorMessage({ message }) {
   if (!message) {
     return null

@@ -8,6 +8,7 @@ import SearchResults from './SearchResults.jsx'
 
 const SEARCH_DELAY_MS = 350
 
+/** Manage debounced stock search and accessible result selection. */
 function StockSearch({ selectedStock, onSelect }) {
   const inputId = useId()
   const [query, setQuery] = useState('')

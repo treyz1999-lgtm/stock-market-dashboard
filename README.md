@@ -38,6 +38,13 @@ npm run build
 
 ## Stock API examples
 
+Copy `backend/.env.example` to `backend/.env` and set a Twelve Data API key:
+
+```env
+TWELVE_DATA_API_KEY=your_api_key_here
+TWELVE_DATA_BASE_URL=https://api.twelvedata.com
+```
+
 Run the backend development server from the repository root:
 
 ```powershell
@@ -56,5 +63,11 @@ Retrieve a current normalized quote:
 GET http://127.0.0.1:8000/api/stocks/AAPL/quote
 ```
 
-Finnhub credentials are loaded server-side from `backend/.env` and must not be
+Retrieve normalized daily price history:
+
+```text
+GET http://127.0.0.1:8000/api/stocks/AAPL/history?range=1Y
+```
+
+Twelve Data credentials are loaded server-side from `backend/.env` and must not be
 included in browser requests.

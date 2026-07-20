@@ -11,6 +11,7 @@ import StockSearch from '../components/StockSearch.jsx'
 import StockSummary from '../components/StockSummary.jsx'
 
 
+/** Coordinate stock selection and independent quote/history requests. */
 function Dashboard() {
   const [selectedStock, setSelectedStock] = useState(null)
   const [range, setRange] = useState('1Y')

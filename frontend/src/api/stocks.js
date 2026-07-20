@@ -10,6 +10,7 @@ const apiClient = axios.create({
   timeout: 12000,
 })
 
+/** Search supported stocks using the backend autocomplete endpoint. */
 export async function searchStocks(query, signal) {
   try {
     const response = await apiClient.get('/api/stocks/search', {
@@ -22,6 +23,7 @@ export async function searchStocks(query, signal) {
   }
 }
 
+/** Fetch the latest normalized quote for a stock symbol. */
 export async function getStockQuote(symbol, signal) {
   try {
     const response = await apiClient.get(
@@ -34,6 +36,7 @@ export async function getStockQuote(symbol, signal) {
   }
 }
 
+/** Fetch normalized daily history for a symbol and dashboard range. */
 export async function getStockHistory(symbol, range, signal) {
   try {
     const response = await apiClient.get(
@@ -49,6 +52,7 @@ export async function getStockHistory(symbol, range, signal) {
   }
 }
 
+/** Return whether an API failure was caused by request cancellation. */
 export function isRequestCanceled(error) {
   return error?.code === 'ERR_CANCELED'
 }

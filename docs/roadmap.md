@@ -9,15 +9,16 @@
 
 ## Phase 2: Market Data
 
-- Integrate a market data provider.
-- Normalize quotes, historical prices, and company metadata.
-- Define caching, rate-limit, and failure-handling strategies.
+- [x] Integrate Twelve Data as the market data provider.
+- [x] Normalize quotes, historical prices, and company metadata.
+- [x] Add in-memory caching, rate-limit handling, and provider failure handling.
 
 ## Phase 3: Dashboard Experience
 
-- Build watchlists and symbol search.
-- Add quote summaries and historical charts.
-- Design responsive loading, empty, and error states.
+- [x] Add symbol search.
+- [x] Add quote summaries and historical charts.
+- [x] Design responsive loading, empty, and error states.
+- Build persistent watchlists.
 
 ## Phase 4: Production Readiness
 

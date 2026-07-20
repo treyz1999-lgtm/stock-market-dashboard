@@ -1,3 +1,5 @@
+'''Normalized stock-data response models shared by routes and services.'''
+
 from datetime import date
 from typing import Literal
 
@@ -8,6 +10,8 @@ HistoryRange = Literal['1W', '1M', '3M', '6M', '1Y']
 
 
 class StockSearchResult(BaseModel):
+    '''Represent one normalized symbol-search match.'''
+
     symbol: str
     display_symbol: str
     name: str
@@ -15,10 +19,14 @@ class StockSearchResult(BaseModel):
 
 
 class StockSearchResponse(BaseModel):
+    '''Wrap symbol-search matches returned to API clients.'''
+
     results: list[StockSearchResult]
 
 
 class StockQuote(BaseModel):
+    '''Represent a normalized current market quote.'''
+
     symbol: str
     current_price: float
     change: float
@@ -27,10 +35,15 @@ class StockQuote(BaseModel):
     low: float
     open: float
     previous_close: float
+    week52_high: float
+    week52_low: float
+    volume: int
     timestamp: int
 
 
 class HistoricalPrice(BaseModel):
+    '''Represent one normalized daily OHLCV price record.'''
+
     timestamp: int
     date: date
     open: float
@@ -41,6 +54,8 @@ class HistoricalPrice(BaseModel):
 
 
 class StockHistoryResponse(BaseModel):
+    '''Wrap ordered historical prices for a symbol and requested range.'''
+
     symbol: str
     range: HistoryRange
     records: list[HistoricalPrice]

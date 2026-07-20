@@ -9,11 +9,17 @@ const moneyFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2,
 })
 
+const numberFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
+
+/** Render the selected company and its latest normalized quote. */
 function StockSummary({ stock, quote, isLoading, error }) {
   if (!stock) {
     return (
       <section className='summary-card empty-state' aria-label='Stock summary'>
-        <div className='empty-state__icon' aria-hidden='true'>↗</div>
+        <div className='empty-state__icon' aria-hidden='true'>&#8599;</div>
         <h2>Select a stock to begin</h2>
         <p>Search by company name or ticker to view its latest market snapshot.</p>
       </section>
@@ -26,11 +32,8 @@ function StockSummary({ stock, quote, isLoading, error }) {
   return (
     <section className='summary-card' aria-labelledby='summary-title'>
       <div className='summary-card__header'>
-        <div>
-          <p className='eyebrow'>Market snapshot</p>
-          <h2 id='summary-title'>{stock.name || stock.symbol}</h2>
-        </div>
-        <span className='symbol-badge'>{stock.symbol}</span>
+        <h2 id='summary-title'>{stock.name || stock.symbol}</h2>
+        <span className='summary-card__symbol'>{stock.symbol}</span>
       </div>
 
       {error && <ErrorMessage message={error} />}
@@ -43,8 +46,9 @@ function StockSummary({ stock, quote, isLoading, error }) {
               {moneyFormatter.format(quote.current_price)}
             </span>
             <span className={`movement movement--${movement}`}>
-              {movementPrefix}{moneyFormatter.format(quote.change)}
-              <span>{movementPrefix}{quote.percent_change.toFixed(2)}%</span>
+              {movementPrefix}{numberFormatter.format(quote.change)}
+              {' '}
+              ({movementPrefix}{quote.percent_change.toFixed(2)}%)
             </span>
           </div>
 
@@ -52,7 +56,7 @@ function StockSummary({ stock, quote, isLoading, error }) {
             <QuoteMetric label='Open' value={quote.open} />
             <QuoteMetric label='High' value={quote.high} />
             <QuoteMetric label='Low' value={quote.low} />
-            <QuoteMetric label='Previous close' value={quote.previous_close} />
+            <QuoteMetric label='Prev Close' value={quote.previous_close} />
           </dl>
 
           <p className='quote-updated'>

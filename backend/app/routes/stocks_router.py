@@ -1,3 +1,5 @@
+'''HTTP routes for normalized stock search, quote, and history data.'''
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -8,22 +10,24 @@ from backend.app.schemas.stocks import (
     StockQuote,
     StockSearchResponse,
 )
-from backend.app.services.finnhub import (
-    FinnhubProvider,
+from backend.app.services.twelve_data import (
     ProviderRateLimitError,
     ProviderUnavailableError,
     StockNotFoundError,
+    TwelveDataProvider,
 )
 
 
 router = APIRouter(prefix='/api/stocks', tags=['stocks'])
 
 
-def get_finnhub_provider(request: Request) -> FinnhubProvider:
-    return request.app.state.finnhub_provider
+def get_stock_provider(request: Request) -> TwelveDataProvider:
+    '''Return the provider initialized during the application lifespan.'''
+
+    return request.app.state.stock_provider
 
 
-ProviderDependency = Annotated[FinnhubProvider, Depends(get_finnhub_provider)]
+ProviderDependency = Annotated[TwelveDataProvider, Depends(get_stock_provider)]
 
 
 @router.get('/search', response_model=StockSearchResponse)
@@ -31,6 +35,8 @@ async def search_stocks(
     q: Annotated[str, Query(min_length=1)],
     provider: ProviderDependency,
 ) -> StockSearchResponse:
+    '''Search supported market symbols using a trimmed query.'''
+
     query = q.strip()
     if not query:
         raise HTTPException(
@@ -48,6 +54,8 @@ async def search_stocks(
 
 @router.get('/{symbol}/quote', response_model=StockQuote)
 async def get_stock_quote(symbol: str, provider: ProviderDependency) -> StockQuote:
+    '''Return a normalized current quote for an uppercase symbol.'''
+
     normalized_symbol = symbol.strip().upper()
     try:
         return await provider.quote(normalized_symbol)
@@ -73,6 +81,8 @@ async def get_stock_history(
     provider: ProviderDependency,
     history_range: Annotated[HistoryRange, Query(alias='range')] = '1Y',
 ) -> StockHistoryResponse:
+    '''Return normalized daily history for a symbol and supported range.'''
+
     normalized_symbol = symbol.strip().upper()
     try:
         records = await provider.history(normalized_symbol, history_range)

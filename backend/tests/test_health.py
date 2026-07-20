@@ -44,6 +44,6 @@ def test_unconfigured_origin_is_not_allowed() -> None:
 
 def _client() -> TestClient:
     def handler(request: httpx.Request) -> httpx.Response:
-        raise AssertionError('The health route must not call Finnhub.')
+        raise AssertionError('The health route must not call Twelve Data.')
 
     return TestClient(create_app(transport=httpx.MockTransport(handler)))

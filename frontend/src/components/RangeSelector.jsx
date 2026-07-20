@@ -1,5 +1,6 @@
 const RANGES = ['1W', '1M', '3M', '6M', '1Y']
 
+/** Render supported historical ranges as an accessible button group. */
 function RangeSelector({ value, onChange, disabled = false }) {
   return (
     <div className='range-selector' aria-label='Historical price range'>

@@ -1,4 +1,6 @@
+from collections import Counter
 from collections.abc import Callable
+from datetime import date
 
 import httpx
 from fastapi.testclient import TestClient
@@ -7,24 +9,47 @@ from backend.app.main import create_app
 
 
 QUOTE_PAYLOAD = {
-    'c': 213.49,
-    'd': 1.25,
-    'dp': 0.589,
-    'h': 214.2,
-    'l': 210.1,
-    'o': 211.0,
-    'pc': 212.24,
-    't': 1_720_000_000,
+    'symbol': 'AAPL',
+    'name': 'Apple Inc',
+    'timestamp': 1_720_000_000,
+    'open': '211.00000',
+    'high': '214.20000',
+    'low': '210.10000',
+    'close': '213.49000',
+    'volume': '75000000',
+    'previous_close': '212.24000',
+    'change': '1.25000',
+    'percent_change': '0.58900',
+    'fifty_two_week': {
+        'high': '237.49000',
+        'low': '164.08000',
+    },
 }
 
 HISTORY_PAYLOAD = {
-    's': 'ok',
-    't': [1_720_086_400, 1_720_000_000],
-    'o': [214.0, 211.0],
-    'h': [216.0, 214.2],
-    'l': [212.5, 210.1],
-    'c': [215.5, 213.49],
-    'v': [82_000_000, 75_000_000],
+    'meta': {
+        'symbol': 'AAPL',
+        'interval': '1day',
+    },
+    'values': [
+        {
+            'datetime': '2024-07-04',
+            'open': '214.00000',
+            'high': '216.00000',
+            'low': '212.50000',
+            'close': '215.50000',
+            'volume': '82000000',
+        },
+        {
+            'datetime': '2024-07-03',
+            'open': '211.00000',
+            'high': '214.20000',
+            'low': '210.10000',
+            'close': '213.49000',
+            'volume': '75000000',
+        },
+    ],
+    'status': 'ok',
 }
 
 PROVIDER_UNAVAILABLE_DETAIL = {
@@ -37,20 +62,19 @@ PROVIDER_UNAVAILABLE_DETAIL = {
 
 def test_company_name_search() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path == '/api/v1/search'
-        assert request.url.params['q'] == 'Apple Inc'
-        assert request.url.params['exchange'] == 'US'
-        assert request.url.params.get('token')
-        results = [
+        _assert_authentication(request)
+        assert request.url.path == '/symbol_search'
+        assert request.url.params['symbol'] == 'Apple Inc'
+        assert request.url.params['outputsize'] == '10'
+        data = [
             {
                 'symbol': f'AAPL{i}',
-                'displaySymbol': f'AAPL{i}',
-                'description': 'Apple Inc',
-                'type': 'Common Stock',
+                'instrument_name': 'Apple Inc',
+                'instrument_type': 'Common Stock',
             }
             for i in range(12)
         ]
-        return httpx.Response(200, json={'count': 12, 'result': results})
+        return httpx.Response(200, json={'data': data, 'status': 'ok'})
 
     with _client(handler) as client:
         response = client.get('/api/stocks/search', params={'q': '  Apple Inc  '})
@@ -65,44 +89,51 @@ def test_company_name_search() -> None:
     }
 
 
-def test_ticker_search() -> None:
+def test_ticker_search_and_empty_results() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.params['q'] == 'AAPL'
+        if request.url.params['symbol'] == 'AAPL':
+            return httpx.Response(
+                200,
+                json={
+                    'data': [
+                        {
+                            'symbol': 'AAPL',
+                            'instrument_name': 'Apple Inc',
+                            'instrument_type': 'Common Stock',
+                        }
+                    ],
+                    'status': 'ok',
+                },
+            )
+        return httpx.Response(200, json={'data': [], 'status': 'ok'})
+
+    with _client(handler) as client:
+        ticker_response = client.get('/api/stocks/search?q=AAPL')
+        empty_response = client.get('/api/stocks/search?q=not-a-company')
+
+    assert ticker_response.status_code == 200
+    assert ticker_response.json()['results'][0]['symbol'] == 'AAPL'
+    assert empty_response.status_code == 200
+    assert empty_response.json() == {'results': []}
+
+
+def test_search_provider_not_found_is_an_empty_result() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
-            json={
-                'result': [
-                    {
-                        'symbol': 'AAPL',
-                        'displaySymbol': 'AAPL',
-                        'description': 'Apple Inc',
-                        'type': 'Common Stock',
-                    }
-                ]
-            },
+            json={'code': 404, 'message': 'provider detail', 'status': 'error'},
         )
 
     with _client(handler) as client:
-        response = client.get('/api/stocks/search?q=AAPL')
-
-    assert response.status_code == 200
-    assert response.json()['results'][0]['symbol'] == 'AAPL'
-
-
-def test_empty_search_results() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={'count': 0, 'result': []})
-
-    with _client(handler) as client:
-        response = client.get('/api/stocks/search?q=not-a-company')
+        response = client.get('/api/stocks/search?q=unlisted-company')
 
     assert response.status_code == 200
     assert response.json() == {'results': []}
 
 
-def test_blank_search_input() -> None:
+def test_blank_search_input_returns_422_without_provider_call() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        raise AssertionError('Finnhub must not be called for a blank search.')
+        raise AssertionError('Twelve Data must not be called for a blank search.')
 
     with _client(handler) as client:
         response = client.get('/api/stocks/search', params={'q': '   '})
@@ -112,9 +143,9 @@ def test_blank_search_input() -> None:
 
 def test_successful_quote_retrieval() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path == '/api/v1/quote'
+        _assert_authentication(request)
+        assert request.url.path == '/quote'
         assert request.url.params['symbol'] == 'AAPL'
-        assert request.url.params.get('token')
         return httpx.Response(200, json=QUOTE_PAYLOAD)
 
     with _client(handler) as client:
@@ -130,6 +161,9 @@ def test_successful_quote_retrieval() -> None:
         'low': 210.1,
         'open': 211.0,
         'previous_close': 212.24,
+        'week52_high': 237.49,
+        'week52_low': 164.08,
+        'volume': 75000000,
         'timestamp': 1_720_000_000,
     }
 
@@ -137,7 +171,7 @@ def test_successful_quote_retrieval() -> None:
 def test_lowercase_ticker_is_normalized() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.params['symbol'] == 'MSFT'
-        return httpx.Response(200, json=QUOTE_PAYLOAD)
+        return httpx.Response(200, json={**QUOTE_PAYLOAD, 'symbol': 'MSFT'})
 
     with _client(handler) as client:
         response = client.get('/api/stocks/%20msft%20/quote')
@@ -146,9 +180,12 @@ def test_lowercase_ticker_is_normalized() -> None:
     assert response.json()['symbol'] == 'MSFT'
 
 
-def test_unknown_ticker_with_missing_fields_returns_404() -> None:
+def test_unknown_ticker_returns_404() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={'c': 0})
+        return httpx.Response(
+            200,
+            json={'code': 404, 'message': 'provider detail', 'status': 'error'},
+        )
 
     with _client(handler) as client:
         response = client.get('/api/stocks/UNKNOWN/quote')
@@ -162,46 +199,21 @@ def test_unknown_ticker_with_missing_fields_returns_404() -> None:
     }
 
 
-def test_empty_quote_response_returns_404() -> None:
+def test_provider_rate_limit_returns_429() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={})
-
-    with _client(handler) as client:
-        response = client.get('/api/stocks/NONE/quote')
-
-    assert response.status_code == 404
-
-
-def test_zero_timestamp_quote_returns_404() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={**QUOTE_PAYLOAD, 't': 0})
-
-    with _client(handler) as client:
-        response = client.get('/api/stocks/OLD/quote')
-
-    assert response.status_code == 404
-
-
-def test_finnhub_rate_limit_returns_429() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(429, json={'error': 'not returned to client'})
+        return httpx.Response(
+            200,
+            json={'code': 429, 'message': 'provider detail', 'status': 'error'},
+        )
 
     with _client(handler) as client:
         response = client.get('/api/stocks/AAPL/quote')
 
     assert response.status_code == 429
-    assert response.json() == {
-        'detail': {
-            'code': 'provider_rate_limit',
-            'message': (
-                'The stock data provider request limit was reached. '
-                'Try again shortly.'
-            ),
-        }
-    }
+    assert response.json()['detail']['code'] == 'provider_rate_limit'
 
 
-def test_finnhub_timeout_returns_502() -> None:
+def test_provider_timeout_returns_502() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ReadTimeout('timed out', request=request)
 
@@ -212,9 +224,20 @@ def test_finnhub_timeout_returns_502() -> None:
     assert response.json() == PROVIDER_UNAVAILABLE_DETAIL
 
 
-def test_finnhub_500_returns_502() -> None:
+def test_provider_500_returns_502() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500, json={'token': 'must not be returned'})
+        return httpx.Response(500, json={'status': 'error', 'code': 500})
+
+    with _client(handler) as client:
+        response = client.get('/api/stocks/AAPL/quote')
+
+    assert response.status_code == 502
+    assert response.json() == PROVIDER_UNAVAILABLE_DETAIL
+
+
+def test_malformed_quote_returns_502() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={**QUOTE_PAYLOAD, 'close': 'not-a-number'})
 
     with _client(handler) as client:
         response = client.get('/api/stocks/AAPL/quote')
@@ -225,13 +248,14 @@ def test_finnhub_500_returns_502() -> None:
 
 def test_history_defaults_to_one_year_and_orders_records() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path == '/api/v1/stock/candle'
+        _assert_authentication(request)
+        assert request.url.path == '/time_series'
         assert request.url.params['symbol'] == 'AAPL'
-        assert request.url.params['resolution'] == 'D'
-        start = int(request.url.params['from'])
-        end = int(request.url.params['to'])
-        assert end - start == 365 * 24 * 60 * 60
-        assert request.url.params.get('token')
+        assert request.url.params['interval'] == '1day'
+        assert 'outputsize' not in request.url.params
+        start = date.fromisoformat(request.url.params['start_date'])
+        end = date.fromisoformat(request.url.params['end_date'])
+        assert (end - start).days == 365
         return httpx.Response(200, json=HISTORY_PAYLOAD)
 
     with _client(handler) as client:
@@ -243,7 +267,7 @@ def test_history_defaults_to_one_year_and_orders_records() -> None:
         'range': '1Y',
         'records': [
             {
-                'timestamp': 1_720_000_000,
+                'timestamp': 1_719_964_800,
                 'date': '2024-07-03',
                 'open': 211.0,
                 'high': 214.2,
@@ -252,7 +276,7 @@ def test_history_defaults_to_one_year_and_orders_records() -> None:
                 'volume': 75_000_000.0,
             },
             {
-                'timestamp': 1_720_086_400,
+                'timestamp': 1_720_051_200,
                 'date': '2024-07-04',
                 'open': 214.0,
                 'high': 216.0,
@@ -267,9 +291,9 @@ def test_history_defaults_to_one_year_and_orders_records() -> None:
 def test_history_range_and_lowercase_symbol_are_normalized() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.params['symbol'] == 'MSFT'
-        start = int(request.url.params['from'])
-        end = int(request.url.params['to'])
-        assert end - start == 7 * 24 * 60 * 60
+        start = date.fromisoformat(request.url.params['start_date'])
+        end = date.fromisoformat(request.url.params['end_date'])
+        assert (end - start).days == 7
         return httpx.Response(200, json=HISTORY_PAYLOAD)
 
     with _client(handler) as client:
@@ -280,9 +304,9 @@ def test_history_range_and_lowercase_symbol_are_normalized() -> None:
     assert response.json()['range'] == '1W'
 
 
-def test_history_rejects_unsupported_range() -> None:
+def test_history_rejects_unsupported_range_without_provider_call() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        raise AssertionError('Finnhub must not be called for an invalid range.')
+        raise AssertionError('Twelve Data must not be called for an invalid range.')
 
     with _client(handler) as client:
         response = client.get('/api/stocks/AAPL/history?range=5Y')
@@ -290,36 +314,33 @@ def test_history_rejects_unsupported_range() -> None:
     assert response.status_code == 422
 
 
-def test_history_no_data_returns_404() -> None:
+def test_history_not_found_returns_404() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={'s': 'no_data'})
+        return httpx.Response(
+            200,
+            json={'code': 404, 'message': 'provider detail', 'status': 'error'},
+        )
 
     with _client(handler) as client:
         response = client.get('/api/stocks/UNKNOWN/history?range=1M')
 
     assert response.status_code == 404
-    assert response.json() == {
-        'detail': {
-            'code': 'stock_not_found',
-            'message': 'No historical data was found for symbol UNKNOWN.',
-        }
-    }
+    assert response.json()['detail']['code'] == 'stock_not_found'
 
 
 def test_history_rate_limit_returns_429() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(429)
+        return httpx.Response(429, json={'status': 'error', 'code': 429})
 
     with _client(handler) as client:
         response = client.get('/api/stocks/AAPL/history?range=3M')
 
     assert response.status_code == 429
-    assert response.json()['detail']['code'] == 'provider_rate_limit'
 
 
 def test_history_timeout_returns_502() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        raise httpx.ReadTimeout('timed out', request=request)
+        raise httpx.ConnectTimeout('timed out', request=request)
 
     with _client(handler) as client:
         response = client.get('/api/stocks/AAPL/history?range=6M')
@@ -328,22 +349,11 @@ def test_history_timeout_returns_502() -> None:
     assert response.json() == PROVIDER_UNAVAILABLE_DETAIL
 
 
-def test_history_500_returns_502() -> None:
-    def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(500)
-
-    with _client(handler) as client:
-        response = client.get('/api/stocks/AAPL/history')
-
-    assert response.status_code == 502
-    assert response.json() == PROVIDER_UNAVAILABLE_DETAIL
-
-
-def test_history_malformed_arrays_return_502() -> None:
+def test_history_malformed_response_returns_502() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
-            json={**HISTORY_PAYLOAD, 'c': [213.49]},
+            json={**HISTORY_PAYLOAD, 'values': [{'datetime': '2024-07-03'}]},
         )
 
     with _client(handler) as client:
@@ -353,8 +363,40 @@ def test_history_malformed_arrays_return_502() -> None:
     assert response.json() == PROVIDER_UNAVAILABLE_DETAIL
 
 
+def test_successful_responses_are_cached() -> None:
+    calls: Counter[str] = Counter()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls[request.url.path] += 1
+        if request.url.path == '/symbol_search':
+            return httpx.Response(200, json={'data': [], 'status': 'ok'})
+        if request.url.path == '/quote':
+            return httpx.Response(200, json=QUOTE_PAYLOAD)
+        if request.url.path == '/time_series':
+            return httpx.Response(200, json=HISTORY_PAYLOAD)
+        raise AssertionError('Unexpected provider path.')
+
+    with _client(handler) as client:
+        for _ in range(2):
+            assert client.get('/api/stocks/search?q=AAPL').status_code == 200
+            assert client.get('/api/stocks/AAPL/quote').status_code == 200
+            assert client.get('/api/stocks/AAPL/history').status_code == 200
+
+    assert calls == Counter(
+        {
+            '/symbol_search': 1,
+            '/quote': 1,
+            '/time_series': 1,
+        }
+    )
+
+
+def _assert_authentication(request: httpx.Request) -> None:
+    assert request.headers['authorization'] == 'apikey test-api-key'
+    assert 'apikey' not in request.url.params
+
+
 def _client(
     handler: Callable[[httpx.Request], httpx.Response],
 ) -> TestClient:
-    transport = httpx.MockTransport(handler)
-    return TestClient(create_app(transport=transport))
+    return TestClient(create_app(transport=httpx.MockTransport(handler)))

@@ -1,3 +1,4 @@
+/** Render keyboard- and pointer-selectable stock autocomplete results. */
 function SearchResults({ results, activeIndex, onHover, onSelect }) {
   return (
     <ul className='search-results' role='listbox' aria-label='Stock matches'>

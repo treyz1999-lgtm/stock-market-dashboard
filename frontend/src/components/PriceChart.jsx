@@ -20,6 +20,7 @@ const moneyFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2,
 })
 
+/** Render responsive closing-price history with direction-aware styling. */
 function PriceChart({ records, isLoading, error, symbol }) {
   if (!symbol) {
     return (
@@ -82,21 +83,23 @@ function PriceChart({ records, isLoading, error, symbol }) {
             dataKey='close'
             stroke='none'
             fill={directionColor}
-            fillOpacity={0.08}
+            fillOpacity={0.07}
             isAnimationActive={false}
           />
           <Line
             type='monotone'
             dataKey='close'
             stroke={directionColor}
-            strokeWidth={2.25}
+            strokeWidth={2}
             dot={false}
             activeDot={{
-              r: 5,
+              r: 7,
               fill: directionColor,
               stroke: '#11151a',
               strokeWidth: 3,
-              className: 'chart-active-dot',
+              style: {
+                filter: `drop-shadow(0 0 5px ${directionColor})`,
+              },
             }}
             isAnimationActive={false}
           />
@@ -113,8 +116,9 @@ function ChartTooltip({ active, payload, color }) {
 
   const record = payload[0].payload
   return (
-    <div className='chart-tooltip' style={{ borderColor: color }}>
-      <span>{formatLongDate(record.date)}</span>
+    <div className='chart-tooltip' style={{ '--chart-accent': color }}>
+      <span className='chart-tooltip__date'>{formatLongDate(record.date)}</span>
+      <span className='chart-tooltip__label'>Close</span>
       <strong style={{ color }}>{moneyFormatter.format(record.close)}</strong>
     </div>
   )
